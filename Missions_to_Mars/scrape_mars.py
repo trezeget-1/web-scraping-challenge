@@ -1,3 +1,17 @@
+from flask import Flask, render_template, redirect
+from flask_pymongo import PyMongo
+
+app = Flask(__name__)
+
+# Use flask_pymongo to set up mongo connection
+app.config["MONGO_URI"] = "mongodb://localhost:27017/scrape"
+mongo = PyMongo(app)
+
+    # conn = "mongodb://localhost:27017"
+    # client = pymongo.MongoClient(conn)
+    # db = client.scrape
+    # collection = db.scraped_data
+
 def scrape():
 
     #!/usr/bin/env python
@@ -54,7 +68,6 @@ def scrape():
     featured_image_url=featured_image["data-fancybox-href"]
     home_site='https://www.jpl.nasa.gov'
     featured_image_url=home_site+featured_image_url
-    featured_image_url
 
 
     # ## Mars Weather
@@ -85,7 +98,6 @@ def scrape():
                 break
                 
     mars_weather=mars_weather[0]
-    mars_weather 
 
 
     # ## Mars Facts
@@ -97,7 +109,6 @@ def scrape():
 
     mars_facts_df = tables[1]
     mars_facts_df=mars_facts_df.set_index("Mars - Earth Comparison")
-    mars_facts_df
 
 
     mars_facts_htmldf= mars_facts_df.to_html().replace('\n','')
@@ -153,7 +164,36 @@ def scrape():
             "hemisphere_image_urls" : hemisphere_image_urls
         }
 
-    return  print(scraped_data)
+    return  scraped_data
 
+#ROUTES
+@app.route("/")
+def mars_data():
 
-scrape()
+    # scraped_info = collection.find_one()
+
+    scraped_data = mongo.db.scraped_data.find_one()
+
+    return render_template("index.html", scraped_data=scraped_data)
+
+@app.route("/scrape")
+def scrape_fn():  
+
+    #WE CREATE THE COLLECTIONS AND ADD THEM TO THE DATABASE THAT I CREATED IN THE CELLS ABOVE
+
+    scraped_data = mongo.db.scraped_data
+    scraped_function = scrape()
+    scraped_data.update({}, scraped_function, upsert=True)
+
+    # conn = "mongodb://localhost:27017"
+    # client = pymongo.MongoClient(conn)
+    # db = client.scrape
+    # collection = db.scraped_data
+
+    # collection.insert_one(scraped_function)
+
+    
+    return redirect("/", code=302)
+
+if __name__ == "__main__":
+    app.run(debug=True)
