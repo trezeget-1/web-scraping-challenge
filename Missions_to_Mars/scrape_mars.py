@@ -7,11 +7,6 @@ app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://localhost:27017/scrape"
 mongo = PyMongo(app)
 
-    # conn = "mongodb://localhost:27017"
-    # client = pymongo.MongoClient(conn)
-    # db = client.scrape
-    # collection = db.scraped_data
-
 def scrape():
 
     #!/usr/bin/env python
@@ -53,14 +48,8 @@ def scrape():
 
     # ## JPL Mars Space Images - Featured Image
 
-    executable_path = {"executable_path": ChromeDriverManager().install()}
-    browser = Browser("chrome", **executable_path, headless=False)
-
-    browser.visit("https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars")
-    html = browser.html
-    browser.quit()
-
-
+    url = "https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars"
+    html = requests.get(url).text
     soup = bs(html, 'html.parser')
 
     featured_image = soup.find('a', class_='fancybox')
@@ -68,7 +57,6 @@ def scrape():
     featured_image_url=featured_image["data-fancybox-href"]
     home_site='https://www.jpl.nasa.gov'
     featured_image_url=home_site+featured_image_url
-
 
     # ## Mars Weather
 
@@ -86,7 +74,7 @@ def scrape():
     soup = bs(html, 'html.parser')
     browser.quit()
 
-    weather_soup = soup.find_all('div', class_='css-1dbjc4n r-j7yic r-qklmqi r-1adg3ll r-1ny4l3l')
+    weather_soup = soup.find_all('div', class_='css-901oao')
     mars_weather=[]
 
     for x in range(len(weather_soup)):
@@ -108,7 +96,9 @@ def scrape():
 
 
     mars_facts_df = tables[1]
-    mars_facts_df=mars_facts_df.set_index("Mars - Earth Comparison")
+
+    mars_facts_df_headings = mars_facts_df.columns.tolist()
+    mars_facts_df_data = mars_facts_df[:].values.tolist()
 
 
     mars_facts_htmldf= mars_facts_df.to_html().replace('\n','')
@@ -161,7 +151,10 @@ def scrape():
             "featured_image_url" : featured_image_url,
             "mars_weather" : mars_weather,
             "mars_facts_df" : mars_facts_htmldf,
-            "hemisphere_image_urls" : hemisphere_image_urls
+            "hemisphere_image_urls" : hemisphere_image_urls,
+            "mars_facts_df_headings" : mars_facts_df_headings,
+            "mars_facts_df_data" : mars_facts_df_data
+
         }
 
     return  scraped_data
@@ -184,14 +177,6 @@ def scrape_fn():
     scraped_data = mongo.db.scraped_data
     scraped_function = scrape()
     scraped_data.update({}, scraped_function, upsert=True)
-
-    # conn = "mongodb://localhost:27017"
-    # client = pymongo.MongoClient(conn)
-    # db = client.scrape
-    # collection = db.scraped_data
-
-    # collection.insert_one(scraped_function)
-
     
     return redirect("/", code=302)
 
